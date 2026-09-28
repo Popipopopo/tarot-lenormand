@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>塔罗 · 雷诺曼</title>
+<style>
+:root{
+  --desk:#6f6f80;
+  --window:#d7d7cf;
+  --window-hi:#efefe8;
+  --ink:#191921;
+  --rule:#8b8b94;
+  --chrome:#2b2b66;
+  --chrome-ink:#e8e8f4;
+  --accent:#c33a72;
+  --shadow:rgba(20,20,30,.45);
+  --ui: Geneva, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Verdana, sans-serif;
+  --data: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --fan-w:52px; --fan-h:86px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{
+  background:var(--desk);
+  background-image:
+    linear-gradient(45deg, rgba(255,255,255,.10) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.10) 75%),
+    linear-gradient(45deg, rgba(255,255,255,.10) 25%, transparent 25%, transparent 75%, rgba(255,255,255,.10) 75%);
+  background-size:4px 4px;
+  background-position:0 0, 2px 2px;
+  color:var(--ink);
+  font:12px/1.5 var(--ui);
+  padding:18px;
+  display:flex;flex-direction:column;gap:18px;
+  -webkit-font-smoothing:none;
+}
+
+/* ---------- window chrome ---------- */
+.win{background:var(--window);border:1px solid var(--ink);box-shadow:3px 3px 0 var(--shadow)}
+.titlebar{
+  display:flex;align-items:center;gap:8px;
+  background:var(--chrome);color:var(--chrome-ink);
+  border-bottom:1px solid var(--ink);
+  padding:3px 7px;min-height:20px;
+}
+.titlebar .stripes{
+  flex:1;height:8px;min-width:12px;opacity:.5;
+  background:repeating-linear-gradient(to bottom,var(--chrome-ink) 0 1px,transparent 1px 3px);
+}
+.titlebar h1,.titlebar h2{font:inherit;font-weight:700;margin:0;letter-spacing:.06em;white-space:nowrap}
+.titlebar .meta{
+  font-family:var(--data);font-size:10px;opacity:.8;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46ch;
+}
+
+/* ---------- layout ---------- */
+.body{display:flex}
+.stage{
+  position:relative;flex:1;min-width:0;
+  background:var(--window-hi);
+  display:flex;flex-direction:column;align-items:center;
+  padding:14px 16px 22px;min-height:540px;overflow:hidden;
+}
+.inspector{
+  width:236px;flex:none;
+  border-left:1px solid var(--rule);
+  padding:12px 13px;
+  display:flex;flex-direction:column;gap:14px;
+  background:var(--window);
+}
+
+/* ---------- controls ---------- */
+.field{display:flex;flex-direction:column;gap:4px}
+.field > label,.field > .lbl{font-size:11px}
+.field .hint{font-size:10px;color:#63636e;line-height:1.45;margin:1px 0 0}
+.seg{display:flex;border:1px solid var(--ink)}
+.seg button{
+  flex:1;font:inherit;font-size:11px;
+  padding:4px 2px;border:0;background:var(--window-hi);color:var(--ink);cursor:pointer;
+}
+.seg button+button{border-left:1px solid var(--ink)}
+.seg button[aria-pressed=true]{background:var(--chrome);color:var(--chrome-ink)}
+.list{display:flex;flex-direction:column;border:1px solid var(--ink);background:var(--window-hi)}
+.list button{
+  font:inherit;font-size:11px;text-align:left;cursor:pointer;
+  display:flex;justify-content:space-between;gap:6px;
+  padding:5px 7px;border:0;background:none;color:var(--ink);
+}
+.list button+button{border-top:1px solid var(--rule)}
+.list button .n{font-family:var(--data);font-size:10px;opacity:.7}
+.list button[aria-pressed=true]{background:var(--chrome);color:var(--chrome-ink)}
+textarea{
+  font:inherit;font-size:11px;resize:vertical;min-height:52px;
+  border:1px solid var(--ink);background:var(--window-hi);color:var(--ink);padding:5px 6px;
+}
+textarea:focus-visible,.seg button:focus-visible,.list button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+.btn{
+  font:inherit;font-size:11px;padding:5px 12px;
+  background:var(--window-hi);color:var(--ink);
+  border:1px solid var(--ink);box-shadow:2px 2px 0 var(--shadow);cursor:pointer;
+}
+.btn:active{box-shadow:none;transform:translate(2px,2px)}
+.btn:disabled{opacity:.4;cursor:default;box-shadow:none}
+.btn.primary{background:var(--chrome);color:var(--chrome-ink)}
+.btn.accent{background:var(--accent);color:#fff}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.row{display:flex;gap:7px;flex-wrap:wrap;justify-content:center}
+.divider{height:1px;background:var(--rule);border:0;margin:0}
+
+.mark{font-family:var(--data);font-size:11px;letter-spacing:.14em;color:var(--accent);text-align:center}
+.hintline{font-family:var(--data);font-size:11px;letter-spacing:.08em;min-height:18px;margin:6px 0 8px;text-align:center}
+
+/* ---------- 牌背 ---------- */
+.back{
+  background:
+    repeating-linear-gradient(to bottom,rgba(232,232,244,.22) 0 1px,transparent 1px 3px),
+    var(--chrome);
+  border:1px solid var(--ink);
+  box-shadow:inset 0 0 0 3px var(--chrome),inset 0 0 0 4px rgba(232,232,244,.55);
+}
+.back::after{
+  content:"✦";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+  color:var(--chrome-ink);font-size:18px;
+}
+
+/* ---------- 牌桌 ---------- */
+.table{position:relative;width:100%;height:236px;flex:none}
+.stack{position:absolute;left:50%;top:26px;width:104px;height:170px;margin-left:-52px;cursor:pointer}
+.stack .back{position:absolute;inset:0;box-shadow:inset 0 0 0 3px var(--chrome),inset 0 0 0 4px rgba(232,232,244,.55),2px 2px 0 var(--shadow)}
+.stack.shuffling .back:nth-child(odd){animation:riffleL .6s ease-in-out 3}
+.stack.shuffling .back:nth-child(even){animation:riffleR .6s ease-in-out 3}
+@keyframes riffleL{0%,100%{transform:translate(0,0)}40%,60%{transform:translate(-80px,6px) rotate(-10deg)}}
+@keyframes riffleR{0%,100%{transform:translate(0,0)}40%,60%{transform:translate(80px,6px) rotate(10deg)}}
+
+.fan{position:absolute;inset:0}
+.fan .back{
+  position:absolute;top:22px;left:50%;width:var(--fan-w);height:var(--fan-h);cursor:pointer;
+  box-shadow:inset 0 0 0 2px var(--chrome),inset 0 0 0 3px rgba(232,232,244,.5);
+  transform:translateX(-50%) rotate(var(--r,0deg)) translateY(var(--lift,0px));
+  transition:transform .7s cubic-bezier(.2,.8,.2,1),opacity .4s;
+}
+.fan .back::after{font-size:10px}
+.fan .back:hover{--lift:-16px;background-color:var(--accent)}
+.fan .back.picked{--lift:-80px;opacity:0;pointer-events:none}
+.fan.fade .back{opacity:0;pointer-events:none}
+
+/* ---------- 牌阵 ---------- */
+.spread{position:relative;margin:10px auto 0;flex:none}
+.slot{position:absolute;width:var(--sw)}
+.card-box,.sup-box{position:relative;perspective:800px}
+.card-box{width:var(--sw);height:var(--sh);border:1px dashed var(--rule);font-size:calc(var(--sw) / 10)}
+.sup-box{
+  display:none;position:absolute;z-index:2;
+  left:calc(var(--sw) * .9);top:calc(var(--sh) * .32);
+  width:calc(var(--sw) * .58);height:calc(var(--sh) * .58);
+  font-size:calc(var(--sw) * .058);
+  border:1px dashed var(--accent);
+}
+.spread.sup-on .sup-box{display:block}
+.card-box.filled,.sup-box.filled{border-color:transparent}
+.slot-label{margin-top:6px;font-size:11px;text-align:center;white-space:nowrap}
+.slot-label b{font-family:var(--data);font-weight:400;background:var(--chrome);color:var(--chrome-ink);padding:0 3px;margin-right:3px}
+
+.c3d{position:absolute;inset:0;cursor:pointer;animation:dealIn .45s ease-out}
+@keyframes dealIn{from{transform:translateY(-50px) scale(.6);opacity:0}}
+.c3d .inner{position:absolute;inset:0;transition:transform .8s;transform-style:preserve-3d}
+.c3d.flipped .inner{transform:rotateY(180deg)}
+.c3d .back,.c3d .front{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.c3d .back{box-shadow:inset 0 0 0 3px var(--chrome),inset 0 0 0 4px rgba(232,232,244,.55),2px 2px 0 var(--shadow)}
+.c3d .back::after{font-size:1.6em}
+.c3d .front{transform:rotateY(180deg);background:#fff;border:1px solid var(--ink);box-shadow:2px 2px 0 var(--shadow)}
+.c3d .front.rev .face{transform:rotate(180deg)}
+.face{
+  position:absolute;inset:.35em;border:1px solid var(--rule);
+  display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  padding:.6em .3em;text-align:center;
+}
+.face .num{font-family:var(--data);font-size:.85em;letter-spacing:.05em;color:var(--accent)}
+.face .sym{font-size:3.3em;line-height:1}
+.face .nm{font-size:1.25em;font-weight:700;letter-spacing:.06em;line-height:1.2}
+.face .en{font-family:var(--data);font-size:.68em;color:#63636e;margin-top:.2em}
+.face .corner{position:absolute;top:.3em;right:.4em;font-family:var(--data);font-size:.85em}
+.face .corner.red{color:#b3262e}
+.sup-box .face .en{display:none}
+
+/* ---------- 解读 ---------- */
+.reading{background:var(--window-hi);padding:4px 16px 12px;font-size:13px;line-height:1.75}
+.reading .empty{color:#4a4a56;padding:14px 0}
+.reading .q{font-family:var(--data);font-size:11px;padding:10px 0 2px;color:#4a4a56}
+.ritem{padding:12px 0;border-bottom:1px solid var(--rule)}
+.ritem:last-child{border-bottom:0}
+.rhead{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.rhead b{font-family:var(--data);font-weight:400;font-size:11px;background:var(--chrome);color:var(--chrome-ink);padding:0 4px}
+.rhead .pos{font-size:11px;color:#4a4a56}
+.rhead .card{font-weight:700;font-size:14px}
+.tag{font-family:var(--data);font-size:10px;border:1px solid var(--ink);padding:0 4px;background:#fff}
+.tag.rev{background:var(--accent);color:#fff;border-color:var(--accent)}
+.reading p{margin:3px 0}
+.kw{color:var(--accent)}
+.muted{color:#63636e;font-size:12px}
+.sup{margin-top:8px;padding:6px 10px;border-left:3px solid var(--accent);background:#f3e6c8}
+.sup .suph{font-size:12px;font-weight:700}
+.summary{margin-top:4px;padding:10px 12px;border:1px solid var(--ink);background:#fff}
+.summary .mark{text-align:left;margin-bottom:4px}
+.statusbar{
+  display:flex;gap:12px;align-items:center;
+  border-top:1px solid var(--rule);padding:4px 9px;
+  font-family:var(--data);font-size:10px;color:#4a4a56;
+}
+.statusbar .spacer{flex:1}
+
+@media (max-width:720px){
+  :root{--fan-w:38px;--fan-h:63px}
+  body{padding:10px;gap:12px}
+  .body{flex-direction:column-reverse}
+  .inspector{width:auto;border-left:0;border-bottom:1px solid var(--rule)}
+  .stage{min-height:0;padding:10px 8px 18px}
+  .table{height:190px}
+  .stack{width:84px;height:138px;margin-left:-42px}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+}
+</style>
+</head>
+<body>
+
+<section class="win">
+  <div class="titlebar">
+    <h1>塔罗 · 雷诺曼</h1>
+    <span class="stripes"></span>
+    <span class="meta" id="meta"></span>
+  </div>
+  <div class="body">
+    <div class="stage" id="stage">
+      <div class="table" id="table">
+        <div class="stack" id="stack" title="点击洗牌"></div>
+        <div class="fan" id="fan"></div>
+      </div>
+      <div class="hintline" id="hint"></div>
+      <div class="row">
+        <button class="btn primary" id="shuffleBtn">洗牌</button>
+        <button class="btn" id="flipAllBtn" hidden>全部翻开</button>
+        <button class="btn accent" id="supBtn" hidden>抽雷诺曼补充</button>
+        <button class="btn" id="resetBtn" hidden>重新开始</button>
+      </div>
+      <div class="spread" id="spread"></div>
+    </div>
+
+    <aside class="inspector">
+      <div class="field">
+        <span class="lbl">牌组</span>
+        <div class="seg" role="group" aria-label="牌组">
+          <button type="button" data-deck="tarot" aria-pressed="true">塔罗</button>
+          <button type="button" data-deck="lenormand" aria-pressed="false">雷诺曼</button>
+        </div>
+      </div>
+      <div class="field" id="rangeField">
+        <span class="lbl">塔罗范围</span>
+        <div class="seg" role="group" aria-label="塔罗范围">
+          <button type="button" data-range="major" aria-pressed="false">仅大牌 22</button>
+          <button type="button" data-range="full" aria-pressed="true">大牌+小牌 78</button>
+        </div>
+      </div>
+      <div class="field" id="revField">
+        <span class="lbl">逆位</span>
+        <div class="seg" role="group" aria-label="逆位">
+          <button type="button" data-rev="1" aria-pressed="true">正逆位</button>
+          <button type="button" data-rev="0" aria-pressed="false">仅正位</button>
+        </div>
+      </div>
+      <div class="field">
+        <span class="lbl">牌阵</span>
+        <div class="list" id="spreadList"></div>
+        <p class="hint" id="spreadDesc"></p>
+      </div>
+      <div class="field">
+        <label for="question">问题（可选）</label>
+        <textarea id="question" placeholder="写下你想问的事……"></textarea>
+      </div>
+      <p class="hint" id="supNote">塔罗翻开后，可以为每个位置再抽一张雷诺曼，把抽象的牌意落到具体的人、事、物上。</p>
+    </aside>
+  </div>
+</section>
+
+<section class="win">
+  <div class="titlebar">
+    <h2>解读</h2>
+    <span class="stripes"></span>
+    <span class="meta" id="readMeta"></span>
+  </div>
+  <div class="reading" id="reading"></div>
+  <div class="statusbar">
+    <span>结果仅供娱乐与自我觉察参考</span>
+    <span class="spacer"></span>
+    <button class="btn" id="copyBtn" style="font-size:10px;padding:2px 7px;box-shadow:none" hidden>复制结果</button>
+  </div>
+</section>
+
+<script src="data.js"></script>
+<script>
+/* ================= 牌阵（x / y 为布局网格坐标） ================= */
+const SPREADS = [
+  {id:"one", name:"单张 · 直指核心",
+   desc:"只抽一张牌，直接揭示问题的核心能量与答案。适合日常指引与快速问事。",
+   positions:[{name:"核心",meaning:"这张牌代表你所问之事最核心的能量与答案。",x:0,y:0}]},
+  {id:"zzhx", name:"直指核心牌阵",
+   desc:"适合问题探索、切中要害。具体问题遇到瓶颈时，用它看清根本所在，找出突破口与可用的资源。",
+   positions:[
+     {name:"问题的核心",meaning:"事情最根本的症结或主题。",x:1,y:0},
+     {name:"障碍或短处",meaning:"阻碍你的因素，或你自身的短处。",x:0,y:1},
+     {name:"问题的对策",meaning:"建议采取的做法与突破口。",x:1,y:1},
+     {name:"资源或长处",meaning:"你可以依靠的资源、优势与长处。",x:2,y:1}]},
+  {id:"wtjj", name:"问题解决牌阵",
+   desc:"适合问题剖析、答疑解惑。梳理前因后果与周遭环境，预判阻碍，找到解决方式。",
+   positions:[
+     {name:"问题发生的原因",meaning:"事情是怎么走到这一步的，根源在哪里。",x:1,y:2},
+     {name:"问题现在的状况",meaning:"眼下问题所处的状态。",x:0,y:1.5},
+     {name:"周遭的环境情况",meaning:"外部环境与身边人事的影响。",x:1,y:1},
+     {name:"将会遇到的阻碍",meaning:"接下来需要面对的困难。",x:0,y:.5},
+     {name:"问题的解决方式",meaning:"化解问题的方向与方法。",x:1,y:0}]},
+];
+
+/* ================= 状态 ================= */
+const $ = sel => document.querySelector(sel);
+const st = {
+  deck:"tarot", range:"full", rev:true, spread:SPREADS[0],
+  round:"main",          // main：主牌；sup：雷诺曼补充
+  pool:[], main:[], sup:[], phase:"ready",
+};
+const pad = n => String(n).padStart(2,"0");
+const esc = s => s.replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+function rand(n){const a=new Uint32Array(1);crypto.getRandomValues(a);return a[0]%n;}
+function shuffled(arr){const a=arr.slice();for(let i=a.length-1;i>0;i--){const j=rand(i+1);[a[i],a[j]]=[a[j],a[i]];}return a;}
+const roundType = () => st.round==="main" ? st.deck : "lenormand";
+const need = () => st.spread.positions.length;
+function hint(t){$("#hint").textContent=t;}
+function show(id,on){$(id).hidden=!on;}
+
+/* ================= 牌面 ================= */
+function faceHTML(c,type){
+  if(type==="tarot"){
+    return `<div class="face"><div class="num">${c.num}</div><div class="sym">${c.sym}</div>
+      <div><div class="nm">${c.name}</div><div class="en">${c.en}</div></div></div>`;
+  }
+  return `<div class="face"><span class="corner ${/[♥♦]/.test(c.poker)?"red":""}">${c.poker}</span>
+    <div class="num">${pad(c.num)}</div><div class="sym">${c.sym}</div>
+    <div><div class="nm">${c.name}</div><div class="en">${c.en}</div></div></div>`;
+}
+
+/* ================= 牌阵布局 ================= */
+function renderSlots(){
+  $("#spread").innerHTML = st.spread.positions.map((p,k)=>
+    `<div class="slot"><div class="card-box"></div><div class="sup-box"></div>
+     <div class="slot-label"><b>${pad(k+1)}</b>${p.name}</div></div>`).join("");
+  layoutSpread();
+}
+function layoutSpread(){
+  const wrap=$("#spread"), ps=st.spread.positions;
+  const cols=Math.max(...ps.map(p=>p.x))+1, rows=Math.max(...ps.map(p=>p.y))+1;
+  const f = wrap.classList.contains("sup-on") ? 1.5 : 1;   // 补充牌要占右侧空间
+  const gap = 18, avail = $("#stage").clientWidth - 24;
+  const base = ps.length===1 ? 150 : 112;
+  const sw = Math.floor(Math.min(base,(avail+gap-cols*gap)/(cols*f)));
+  const sh = Math.round(sw*1.65), uw = sw*f+gap, uh = sh+38;
+  wrap.style.setProperty("--sw",sw+"px"); wrap.style.setProperty("--sh",sh+"px");
+  wrap.style.width = (cols*uw-gap)+"px";
+  wrap.style.height = (rows*uh-8)+"px";
+  wrap.querySelectorAll(".slot").forEach((el,k)=>{el.style.left=ps[k].x*uw+"px"; el.style.top=ps[k].y*uh+"px";});
+}
+
+/* ================= 流程 ================= */
+function showTable(){
+  $("#table").style.display="";
+  $("#stack").innerHTML=Array.from({length:10},(_,i)=>`<div class="back" style="transform:translate(${i*.6}px,${-i*.6}px)"></div>`).join("");
+  $("#stack").style.display="";
+  $("#fan").innerHTML=""; $("#fan").className="fan";
+}
+
+function reset(){
+  Object.assign(st,{round:"main",pool:[],main:[],sup:[],phase:"ready"});
+  $("#spread").classList.remove("sup-on");
+  renderSlots(); showTable();
+  $("#shuffleBtn").textContent="洗牌"; $("#shuffleBtn").disabled=false;
+  show("#shuffleBtn",true); show("#flipAllBtn",false); show("#supBtn",false); show("#resetBtn",false);
+  hint("静心默念问题，然后洗牌");
+  renderControls(); renderReading();
+}
+
+function shuffle(){
+  if(!(st.phase==="ready"||st.phase==="pick")) return;
+  st.phase="shuffling";
+  $("#shuffleBtn").disabled=true;
+  $("#fan").innerHTML=""; $("#stack").style.display="";
+  hint("洗牌中 ……");
+  const type=roundType();
+  const src = type==="tarot" ? (st.range==="major" ? TAROT.slice(0,22) : TAROT) : LENORMAND;
+  const useRev = type==="tarot" && st.rev;
+  st.pool = shuffled(src).map(c=>({card:c, rev:useRev && rand(2)===1, shown:false}));
+  const stack=$("#stack");
+  stack.classList.remove("shuffling"); void stack.offsetWidth; stack.classList.add("shuffling");
+  setTimeout(()=>{stack.classList.remove("shuffling"); spreadFan();},1850);
+}
+
+function spreadFan(){
+  $("#stack").style.display="none";
+  const fan=$("#fan");
+  fan.innerHTML="";
+  st.pool.forEach((_,i)=>{
+    const el=document.createElement("div");
+    el.className="back"; el.style.zIndex=i;
+    el.onclick=()=>pick(i,el);
+    fan.appendChild(el);
+  });
+  requestAnimationFrame(()=>requestAnimationFrame(()=>layoutFan(true)));
+  st.phase="pick";
+  $("#shuffleBtn").disabled=false; $("#shuffleBtn").textContent="再洗一次";
+  hintPick();
+}
+function layoutFan(stagger){
+  const fan=$("#fan"), els=fan.children, n=els.length;
+  if(!n) return;
+  const W=fan.clientWidth, cw=els[0].offsetWidth;
+  const a = W<600 ? 40 : 34;
+  const R = Math.min(620,(W-cw-10)/(2*Math.sin(a*Math.PI/180)));
+  [...els].forEach((el,i)=>{
+    el.style.transformOrigin=`50% ${R}px`;
+    el.style.transitionDelay = stagger ? (i*5)+"ms" : "0ms";
+    el.style.setProperty("--r",(n===1?0:-a+2*a*i/(n-1))+"deg");
+  });
+}
+function hintPick(){
+  const arr=st[st.round], k=arr.length, p=st.spread.positions[k];
+  const who = st.round==="sup" ? "雷诺曼补充" : "";
+  hint(need()===1 ? `凭直觉，抽出一张${who}牌` : `凭直觉抽${who}牌 ${k+1}/${need()} · ${p.name}`);
+}
+
+function pick(i,el){
+  if(st.phase!=="pick"||el.classList.contains("picked")) return;
+  el.style.transitionDelay="0ms";
+  el.classList.add("picked");
+  const round=st.round, arr=st[round], k=arr.length, d=st.pool[i];
+  arr.push(d);
+  const box=$("#spread").querySelectorAll(".slot")[k].querySelector(round==="main"?".card-box":".sup-box");
+  box.classList.add("filled");
+  box.innerHTML=`<div class="c3d"><div class="inner"><div class="back"></div>
+    <div class="front ${d.rev?"rev":""}">${faceHTML(d.card,roundType())}</div></div></div>`;
+  box.firstElementChild.onclick=()=>flip(round,k);
+  show("#shuffleBtn",false);
+  if(arr.length===need()){
+    st.phase="reveal";
+    $("#fan").classList.add("fade");
+    setTimeout(()=>{$("#table").style.display="none";},450);
+    hint("点击牌面翻开");
+    show("#flipAllBtn",need()>1); show("#resetBtn",true);
+  } else hintPick();
+}
+
+function flip(round,k){
+  const d=st[round][k];
+  if(!d||d.shown) return;
+  d.shown=true;
+  const box=$("#spread").querySelectorAll(".slot")[k].querySelector(round==="main"?".card-box":".sup-box");
+  box.firstElementChild.classList.add("flipped");
+  setTimeout(renderReading,450);
+  if(round===st.round && st[round].length===need() && st[round].every(x=>x.shown)){
+    st.phase="done"; show("#flipAllBtn",false);
+    if(round==="main" && st.deck==="tarot"){ show("#supBtn",true); hint("可以再抽雷诺曼，为每个位置补充具体说明"); }
+    else hint("");
+  }
+}
+
+function startSup(){
+  st.round="sup"; st.phase="ready"; st.pool=[];
+  $("#spread").classList.add("sup-on"); layoutSpread();
+  showTable();
+  show("#supBtn",false);
+  $("#shuffleBtn").textContent="洗雷诺曼"; $("#shuffleBtn").disabled=false; show("#shuffleBtn",true);
+  hint("为每个位置各抽一张雷诺曼");
+  $("#table").scrollIntoView({behavior:"smooth",block:"nearest"});
+}
+
+/* ================= 解读 ================= */
+const SUIT_NOTE = {
+  wands:"权杖偏多：事情的重心在行动、事业与热情上。",
+  cups:"圣杯偏多：情感与关系是这件事的主轴。",
+  swords:"宝剑偏多：思虑、沟通与冲突占了很大比重，留意想太多。",
+  pentacles:"星币偏多：焦点落在金钱、工作与现实条件上。",
+};
+const toneTag = t => `<span class="tag">${t==="吉"?"偏吉":t==="凶"?"偏凶":"中性"}</span>`;
+
+function mainHTML(d){
+  const c=d.card;
+  if(st.deck==="tarot"){
+    return `<span class="card">${c.name}</span><span class="tag ${d.rev?"rev":""}">${d.rev?"逆位":"正位"}</span></div>
+      <p>关键词：<span class="kw">${d.rev?c.rev:c.up}</span></p>
+      <p>${c.desc}</p>
+      ${d.rev ? `<p>逆位时，这股能量受阻、内化或走向过度——正位的「${c.up}」尚未顺畅展现。</p>` : ""}`;
+  }
+  return `<span class="card">${pad(c.num)} ${c.name}</span>${toneTag(c.tone)}</div>
+    <p>关键词：<span class="kw">${c.kw}</span></p><p>${c.desc}</p>`;
+}
+function supHTML(s,d){
+  const c=s.card, first=c.kw.split("、")[0];
+  return `<div class="sup"><div class="suph">雷诺曼补充 · ${pad(c.num)} ${c.name} ${toneTag(c.tone)}</div>
+    <p>关键词：<span class="kw">${c.kw}</span>。${c.desc}</p>
+    <p class="muted">把「${d.card.name}${d.rev?"（逆位）":""}」落到具体层面：这件事很可能与「${first}」有关。</p></div>`;
+}
+function summaryHTML(){
+  const m=st.main, lines=[];
+  if(st.deck==="tarot"){
+    const maj=m.filter(d=>d.card.major).length, rev=m.filter(d=>d.rev).length, n=m.length;
+    if(st.range==="full"){
+      lines.push(`大牌 ${maj}/${n}：` + (maj*2>=n ? "大牌占比高，这件事牵涉较深层的课题或命运性的转折。"
+        : maj===0 ? "全是小牌，事情主要落在日常层面，可以靠具体行动改变。" : "大小牌交织，既有深层课题，也有可操作的细节。"));
+      const cnt={}; m.forEach(d=>{if(d.card.suit) cnt[d.card.suit]=(cnt[d.card.suit]||0)+1;});
+      const top=Object.entries(cnt).sort((a,b)=>b[1]-a[1])[0];
+      if(top && top[1]>=2) lines.push(SUIT_NOTE[top[0]]);
+    }
+    if(st.rev) lines.push(`逆位 ${rev}/${n}：` + (rev===0 ? "没有逆位，整体能量较为顺畅。"
+      : rev*2>=n ? "逆位较多，能量有阻滞或内耗，宜先调整内在状态。" : "少量逆位，留意对应位置的阻滞。"));
+  } else {
+    const g=m.filter(d=>d.card.tone==="吉").length, b=m.filter(d=>d.card.tone==="凶").length;
+    lines.push(`吉 ${g} · 凶 ${b} · 中性 ${m.length-g-b}：` + (g>b ? "整体走向偏好。" : b>g ? "整体阻力偏多，需谨慎应对。" : "吉凶参半，关键看具体位置。"));
+  }
+  if(st.sup.length===need() && st.sup.every(d=>d.shown)){
+    const g=st.sup.filter(d=>d.card.tone==="吉").length, b=st.sup.filter(d=>d.card.tone==="凶").length;
+    lines.push(`雷诺曼补充 吉 ${g} · 凶 ${b}：` + (g>b ? "现实层面的助力多于阻力。" : b>g ? "现实层面有不少具体的阻碍要处理。" : "现实层面助力与阻碍并存。"));
+  }
+  return `<div class="summary"><div class="mark">OVERVIEW · 整体</div>${lines.map(l=>`<p>${l}</p>`).join("")}</div>`;
+}
+
+function renderReading(){
+  const box=$("#reading"), ps=st.spread.positions;
+  const shownN = st.main.filter(d=>d.shown).length;
+  $("#readMeta").textContent = `${shownN}/${need()} 已翻开`;
+  show("#copyBtn",shownN>0);
+  if(!shownN){ box.innerHTML=`<div class="empty">翻开牌后，解读会出现在这里。</div>`; return; }
+  const q=$("#question").value.trim();
+  let h = q ? `<div class="q">所问 · ${esc(q)}</div>` : "";
+  ps.forEach((p,k)=>{
+    const d=st.main[k]; if(!d||!d.shown) return;
+    const s=st.sup[k];
+    h += `<div class="ritem"><div class="rhead"><b>${pad(k+1)}</b><span class="pos">${p.name}</span>${mainHTML(d)}
+      <p class="muted">${p.meaning}</p>${s&&s.shown ? supHTML(s,d) : ""}</div>`;
+  });
+  if(ps.length>1 && shownN===need()) h += summaryHTML();
+  box.innerHTML=h;
+}
+
+/* ================= 设置面板 ================= */
+function renderControls(){
+  document.querySelectorAll("[data-deck]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.deck===st.deck));
+  document.querySelectorAll("[data-range]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.range===st.range));
+  document.querySelectorAll("[data-rev]").forEach(b=>b.setAttribute("aria-pressed",(b.dataset.rev==="1")===st.rev));
+  $("#spreadList").innerHTML = SPREADS.map((s,i)=>
+    `<button type="button" data-spread="${i}" aria-pressed="${s===st.spread}"><span>${s.name}</span><span class="n">${s.positions.length} 张</span></button>`).join("");
+  $("#spreadDesc").textContent = st.spread.desc;
+  const tarot = st.deck==="tarot";
+  $("#rangeField").hidden = $("#revField").hidden = $("#supNote").hidden = !tarot;
+  $("#meta").textContent = (tarot ? `塔罗 · ${st.range==="major"?"大牌 22":"全副 78"}` : "雷诺曼 · 36") + ` · ${st.spread.name}`;
+}
+
+document.querySelector(".inspector").addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  if(b.dataset.deck) st.deck=b.dataset.deck;
+  else if(b.dataset.range) st.range=b.dataset.range;
+  else if(b.dataset.rev) st.rev=b.dataset.rev==="1";
+  else if(b.dataset.spread) st.spread=SPREADS[+b.dataset.spread];
+  else return;
+  reset();
+});
+$("#question").addEventListener("input",renderReading);
+$("#shuffleBtn").onclick=shuffle;
+$("#stack").onclick=shuffle;
+$("#resetBtn").onclick=reset;
+$("#supBtn").onclick=startSup;
+$("#flipAllBtn").onclick=()=>{const r=st.round; st[r].forEach((_,k)=>setTimeout(()=>flip(r,k),k*220));};
+$("#copyBtn").onclick=()=>{
+  const text=`【${$("#meta").textContent}】\n`+$("#reading").innerText;
+  navigator.clipboard.writeText(text).then(()=>{$("#copyBtn").textContent="已复制";setTimeout(()=>$("#copyBtn").textContent="复制结果",1200);});
+};
+window.addEventListener("resize",()=>{layoutSpread(); if(st.phase==="pick") layoutFan(false);});
+
+reset();
+</script>
+</body>
+</html>
