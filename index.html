@@ -147,7 +147,7 @@ textarea:focus-visible,.seg button:focus-visible,.list button:focus-visible{outl
 
 /* ---------- 牌阵 ---------- */
 .spread{position:relative;margin:10px auto 0;flex:none}
-.slot{position:absolute;width:var(--sw)}
+.slot{position:absolute;width:var(--slot-w)}
 .card-box,.sup-box{position:relative;perspective:800px}
 .card-box{width:var(--sw);height:var(--sh);border:1px dashed var(--rule);font-size:calc(var(--sw) / 10)}
 .sup-box{
@@ -159,7 +159,8 @@ textarea:focus-visible,.seg button:focus-visible,.list button:focus-visible{outl
 }
 .spread.sup-on .sup-box{display:block}
 .card-box.filled,.sup-box.filled{border-color:transparent}
-.slot-label{margin-top:6px;font-size:11px;text-align:center;white-space:nowrap}
+.slot-label{margin-top:6px;font-size:11px;line-height:1.35;text-align:center;width:var(--slot-w)}
+.slot-label b{white-space:nowrap}
 .slot-label b{font-family:var(--data);font-weight:400;background:var(--chrome);color:var(--chrome-ink);padding:0 3px;margin-right:3px}
 
 .c3d{position:absolute;inset:0;cursor:pointer;animation:dealIn .45s ease-out}
@@ -328,6 +329,15 @@ const SPREADS = [
      {name:"卡点",meaning:"目前卡住你的地方，需要突破的关键。",x:2,y:1},
      {name:"外界环境",meaning:"外部环境与身边人事带来的影响。",x:1,y:2},
      {name:"总结",meaning:"综合四个方向后，这件事的整体结论与建议。",x:1,y:1}]},
+  {id:"2x1", name:"二选一牌阵",
+   desc:"主要用于抉择与判断。面对两个选项时，分别看两条路的发展与最终结果，帮助你决定方向。",
+   compare:{A:[1,3], B:[2,4]},
+   positions:[
+     {name:"问题的现况",meaning:"你目前所处的状况与心态。",x:1.5,y:2},
+     {name:"选择A的发展",meaning:"选择 A 之后事情会如何发展。",x:1,y:1},
+     {name:"选择B的发展",meaning:"选择 B 之后事情会如何发展。",x:2,y:1},
+     {name:"选择A的最终结果",meaning:"选择 A 最终会走向的结果。",x:0,y:0},
+     {name:"选择B的最终结果",meaning:"选择 B 最终会走向的结果。",x:3,y:0}]},
 ];
 
 /* ================= 状态 ================= */
@@ -368,11 +378,11 @@ function layoutSpread(){
   const wrap=$("#spread"), ps=st.spread.positions;
   const cols=Math.max(...ps.map(p=>p.x))+1, rows=Math.max(...ps.map(p=>p.y))+1;
   const f = wrap.classList.contains("sup-on") ? 1.5 : 1;   // 补充牌要占右侧空间
-  const gap = 18, avail = $("#stage").clientWidth - 24;
+  const avail = $("#stage").clientWidth - 24, narrow = avail < 500, gap = narrow ? 10 : 18;
   const base = ps.length===1 ? 150 : 112;
   const sw = Math.floor(Math.min(base,(avail+gap-cols*gap)/(cols*f)));
-  const sh = Math.round(sw*1.65), uw = sw*f+gap, uh = sh+38;
-  wrap.style.setProperty("--sw",sw+"px"); wrap.style.setProperty("--sh",sh+"px");
+  const sh = Math.round(sw*1.65), uw = sw*f+gap, uh = sh + (narrow ? 50 : 38);
+  wrap.style.setProperty("--sw",sw+"px"); wrap.style.setProperty("--sh",sh+"px"); wrap.style.setProperty("--slot-w",Math.floor(sw*f)+"px");
   wrap.style.width = (cols*uw-gap)+"px";
   wrap.style.height = (rows*uh-8)+"px";
   wrap.querySelectorAll(".slot").forEach((el,k)=>{el.style.left=ps[k].x*uw+"px"; el.style.top=ps[k].y*uh+"px";});
@@ -531,6 +541,21 @@ function summaryHTML(){
   } else {
     const g=m.filter(d=>d.card.tone==="吉").length, b=m.filter(d=>d.card.tone==="凶").length;
     lines.push(`吉 ${g} · 凶 ${b} · 中性 ${m.length-g-b}：` + (g>b ? "整体走向偏好。" : b>g ? "整体阻力偏多，需谨慎应对。" : "吉凶参半，关键看具体位置。"));
+  }
+  const cmp=st.spread.compare;
+  if(cmp){
+    // 简单倾向分：正位 / 吉 +1，逆位 / 凶 −1；已翻开的雷诺曼补充一并计入
+    const supDone = st.sup.length===need() && st.sup.every(d=>d.shown);
+    const tone = c => c.tone==="吉" ? 1 : c.tone==="凶" ? -1 : 0;
+    const score = ks => ks.reduce((t,k)=>{
+      const d=m[k];
+      t += st.deck==="tarot" ? (d.rev ? -1 : 1) : tone(d.card);
+      if(supDone) t += tone(st.sup[k].card);
+      return t;
+    },0);
+    const a=score(cmp.A), b=score(cmp.B);
+    lines.push(`倾向分 A ${a} · B ${b}：` + (a>b ? "选择 A 的走向相对更顺。" : b>a ? "选择 B 的走向相对更顺。"
+      : "两条路势均力敌，更要看你真正在意的是什么。") + "（分数只作参考，请结合每张牌的具体含义）");
   }
   if(st.sup.length===need() && st.sup.every(d=>d.shown)){
     const g=st.sup.filter(d=>d.card.tone==="吉").length, b=st.sup.filter(d=>d.card.tone==="凶").length;
